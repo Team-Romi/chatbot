@@ -24,6 +24,16 @@ jobs:
       - name: 코드 체크아웃
         uses: actions/checkout@v4
 
+      - name: .env 파일 생성
+        run: |
+          if [ -n "${{ secrets.ENV_FILE }}" ]; then
+            echo "${{ secrets.ENV_FILE }}" > .env
+            echo ".env 파일이 생성되었습니다."
+          else
+            echo "경고: ENV_FILE 시크릿이 설정되지 않았습니다."
+          fi
+        shell: bash
+
       - name: Docker 빌드환경 설정
         uses: docker/setup-buildx-action@v3
 
