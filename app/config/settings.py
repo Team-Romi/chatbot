@@ -17,6 +17,7 @@ class Settings(BaseSettings):
 
   # GitHub API 설정
   github_api_base_url: str
+  github_api_token: str | None = None
 
   # Ollama 설정
   ollama_base_url: str
