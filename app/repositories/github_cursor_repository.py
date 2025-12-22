@@ -16,6 +16,9 @@ class GithubCursorRepository:
     repository_name: str,
     source_type: SourceType,
   ) -> Optional[GithubCursorEntity]:
+    """
+    특정 repository + source_type 커서 조회
+    """
     query = select(GithubCursorEntity).where(
       GithubCursorEntity.repository_name == repository_name,
       GithubCursorEntity.source_type == source_type,
@@ -29,7 +32,10 @@ class GithubCursorRepository:
     repository_name: str,
     source_type: SourceType,
     cursor_value: str,
-  ) -> None:
+  ) -> GithubCursorEntity:
+    """
+    커서 upsert (없으면 생성, 있으면 업데이트)
+    """
     query = insert(GithubCursorEntity).values(
       id=uuid.uuid4(),
       repository_name=repository_name,
@@ -41,5 +47,7 @@ class GithubCursorRepository:
         "cursor_value": cursor_value,
         "updated_at": func.now(),
       },
-    )
-    await session.execute(query)
+    ).returning(GithubCursorEntity)
+
+    result = await session.execute(query)
+    return result.scalar_one()
