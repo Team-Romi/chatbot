@@ -1,2 +1,64 @@
-{# 빈 파일 - 메인 페이지 템플릿 (챗봇 인터페이스) #}
+{% extends "base.html" %}
 
+{% block title %}ROMI - GitHub 지식 베이스{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <!-- 타이틀 -->
+  <div class="text-center mb-8">
+    <h1 class="text-4xl font-bold mb-2">ROMI</h1>
+    <p class="text-base-content/70">GitHub 지식 베이스</p>
+  </div>
+
+  <!-- 연결된 레포지토리 목록 -->
+  <div class="card bg-base-100 shadow-xl mb-6">
+    <div class="card-body">
+      <h2 class="card-title text-lg mb-4">연결된 레포지토리</h2>
+
+      {% if repos %}
+        <div class="space-y-4">
+          {% for repo in repos %}
+          <div class="flex items-center justify-between p-4 bg-base-200 rounded-lg hover:bg-base-300 transition-colors">
+            <div class="flex items-center gap-3">
+              <div class="text-2xl">📁</div>
+              <div>
+                <div class="font-semibold">{{ repo.owner }}/{{ repo.name }}</div>
+                <div class="text-sm text-base-content/60">
+                  이슈 {{ repo.issue_count }}개 · 마지막 동기화: {{ repo.last_synced }}
+                </div>
+              </div>
+            </div>
+            <a href="/{{ repo.owner }}/{{ repo.name }}" class="btn btn-primary btn-sm">
+              채팅하기 →
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center py-8 text-base-content/60">
+          연결된 레포지토리가 없습니다.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- 새 레포지토리 추가 -->
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+      <h2 class="card-title text-lg mb-4">새 레포지토리 추가</h2>
+      <div class="flex gap-2">
+        <input
+          type="text"
+          placeholder="https://github.com/owner/repo"
+          class="input input-bordered flex-1"
+          disabled
+        />
+        <button class="btn btn-primary" disabled>연결</button>
+      </div>
+      <p class="text-sm text-base-content/50 mt-2">
+        * 백엔드 구현 후 활성화됩니다
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
