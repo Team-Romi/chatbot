@@ -1,0 +1,96 @@
+name: romi-auto-file-upload.yml
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  upload-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      # 타임스탬프 폴더명 생성
+      - name: 타임스탬프 폴더명 생성
+        run: |
+          # Asia/Seoul 로컬타임 사용
+          export TZ='Asia/Seoul'
+          # YYYY-MM-DD_HH-MM-SS 형식
+          TIMESTAMP=$(date '+%Y-%m-%d_%H-%M-%S')
+          echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
+          echo "BUILD_DATE=$(date '+%Y-%m-%d %H:%M')" >> $GITHUB_ENV
+          echo "생성된 타임스탬프: $TIMESTAMP"
+
+      # 짧은 커밋 해시 계산
+      - name: 짧은 커밋 해시 계산
+        run: |
+          echo "SHORT_COMMIT_HASH=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
+          echo "짧은 커밋 해시: $(echo ${{ github.sha }} | cut -c1-7)"
+
+      - name: 서버에 파일 업로드
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: 2022
+          envs: TIMESTAMP,SHORT_COMMIT_HASH,BUILD_DATE
+          script: |
+            set -e
+            
+            echo "환경변수 설정.."
+            export PW=${{ secrets.SERVER_PASSWORD }}
+            
+            # 최신 파일 저장 디렉토리 생성
+            echo "메인 디렉토리 생성 중..."
+            echo $PW | sudo -S mkdir -p /volume1/projects/romi/github_secret
+            
+            # 타임스탬프 백업 디렉토리 생성
+            echo "타임스탬프 백업 디렉토리 생성 중... ($TIMESTAMP)"
+            echo $PW | sudo -S mkdir -p /volume1/projects/romi/github_secret/$TIMESTAMP
+            
+            # .env 파일 업로드 (최신 + 백업)
+            echo ".env 파일 업로드 중..."
+            cat << 'EOF' | sudo tee /volume1/projects/romi/github_secret/.env > /dev/null
+            ${{ secrets.APPLICATION_PROD_YML }}
+            EOF
+            cat << 'EOF' | sudo tee /volume1/projects/romi/github_secret/$TIMESTAMP/.env > /dev/null
+            ${{ secrets.APPLICATION_PROD_YML }}
+            EOF
+            echo ".env 파일 업로드 완료"
+            
+            # 메타데이터 JSON 파일 생성 및 업로드
+            echo "메타데이터 JSON 파일 생성 중..."
+            cat << EOF | sudo tee /volume1/projects/romi/github_secret/$TIMESTAMP/cicd-gitignore-file.json > /dev/null
+            {
+              "build_info": {
+                "timestamp": "$TIMESTAMP",
+                "workflow": "설정 파일 관리",
+                "run_id": "${{ github.run_id }}",
+                "run_number": "${{ github.run_number }}",
+                "job": "upload-files",
+                "event": "${{ github.event_name }}",
+                "repository": "${{ github.repository }}",
+                "owner": "${{ github.repository_owner }}",
+                "branch": "${{ github.ref_name }}",
+                "commit_hash": "${{ github.sha }}",
+                "short_hash": "$SHORT_COMMIT_HASH",
+                "commit_url": "https://github.com/${{ github.repository }}/commit/${{ github.sha }}",
+                "actor": "${{ github.actor }}",
+                "build_date": "$BUILD_DATE",
+                "runner_os": "${{ runner.os }}"
+              },
+              "files": [
+                {
+                  "file_name": ".env",
+                  "file_path": "/",
+                  "last_updated": "$BUILD_DATE"
+                }
+              ]
+            }
+            EOF
+            echo "메타데이터 JSON 파일 업로드 완료"
+            
+            echo "모든 파일 업로드 완료"
